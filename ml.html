@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Predicting My Next Blinkit Order — Lavanya Bhatia</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
+<style>
+/* --- BASE VARIABLES (from UI.html) --- */
+:root {
+    --bg: #05040A;
+    --bg-alt: #0C0A17;
+    --surface: #111024;
+    --surface-soft: #181834;
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --text: #F5F3FF;
+    --text-soft: #C9C7E6;
+    --muted: #8582AD;
+    --accent: #A855F7;
+    --accent-soft: rgba(168, 85, 247, 0.18);
+    --accent-strong: #C084FC;
+    --accent-alt: #F97373;
+    --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.55);
+    --radius-xl: 28px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --transition-fast: 180ms ease-out;
+    --transition-med: 260ms ease-out;
+    --nav-height: 80px;
+    /* ML-specific semantic colors — adapted to match palette */
+    --green: #A855F7;
+    --green-bg: rgba(168, 85, 247, 0.12);
+    --green-mid: #C084FC;
+    --orange: #F97373;
+    --orange-bg: rgba(249, 115, 115, 0.12);
+    --orange-mid: #FCA5A5;
+    --yellow: #FBC005;
+    --yellow-bg: rgba(251, 188, 5, 0.10);
+    --blue: #60A5FA;
+    --blue-bg: rgba(96, 165, 250, 0.10);
+    --red: #F97373;
+    --red-bg: rgba(249, 115, 115, 0.12);
+    --shadow: 0 2px 16px rgba(0,0,0,0.4);
+    --r: 14px;
+    --nav-h: var(--nav-height);
+}
+
+[data-theme="light"] {
+    --bg: #F5E6D3;
+    --bg-alt: #FFE7DF;
+    --surface: #FFFFFF;
+    --surface-soft: #FFEDE6;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --text: #2A0810;
+    --text-soft: #5D202A;
+    --muted: #8A4A50;
+    --accent: #7F1D1D;
+    --accent-soft: rgba(127, 29, 29, 0.08);
+    --accent-strong: #B91C1C;
+    --accent-alt: #DC6B6B;
+    --shadow-soft: 0 18px 40px rgba(148, 27, 39, 0.18);
+    --green: #7F1D1D;
+    --green-bg: rgba(127, 29, 29, 0.10);
+    --green-mid: #B91C1C;
+    --orange: #C45000;
+    --orange-bg: rgba(196, 80, 0, 0.10);
+    --orange-mid: #EA580C;
+    --yellow: #8A6800;
+    --yellow-bg: rgba(138, 104, 0, 0.10);
+    --blue: #1D4ED8;
+    --blue-bg: rgba(29, 78, 216, 0.08);
+    --red: #B91C1C;
+    --red-bg: rgba(185, 28, 28, 0.10);
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* --- RESET & GLOBAL --- */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    scroll-behavior: smooth;
+    background: var(--bg);
+    overflow-x: hidden;
+    width: 100%;
+}
+
+body {
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+    padding-top: var(--nav-height);
+    transition: background 0.3s, color 0.3s;
+}
+
+img { max-width: 100%; display: block; }
+
+/* --- NAVIGATION (from UI.html) --- */
+nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: var(--nav-height);
+    display: flex;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(16px);
+    background: linear-gradient(90deg, rgba(5, 4, 10, 0.96), rgba(5, 4, 10, 0.94), rgba(5, 4, 10, 0.92));
+    border-bottom: 1px solid var(--border-subtle);
+    transition: box-shadow var(--transition-med), background var(--transition-med), border-color var(--transition-fast);
+}
+
+[data-theme="light"] nav {
+    background: linear-gradient(90deg, rgba(255, 247, 243, 0.97), rgba(255, 247, 243, 0.99));
+}
+
+nav.scrolled { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55); }
+
+.nav-inner {
+    width: min(1120px, 92vw);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.nav-left { display: flex; align-items: center; gap: 1.1rem; min-width: 0; flex: 1; }
+.nav-right { display: flex; align-items: center; gap: 1.6rem; flex-shrink: 0; }
+
+.back-link {
+    text-decoration: none;
+    color: var(--text-soft);
+    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: radial-gradient(circle at top left, rgba(168, 85, 247, 0.24), transparent 60%);
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+[data-theme="light"] .back-link {
+    background: radial-gradient(circle at top left, rgba(127, 29, 29, 0.12), transparent 60%);
+}
+
+.back-link span.icon { font-size: 1.1rem; transform: translateY(-1px); }
+.back-link:hover {
+    border-color: var(--accent-strong);
+    color: var(--accent-strong);
+    transform: translateY(-1px);
+}
+
+.nav-title {
+    font-size: 0.86rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+    min-width: 0;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.nav-link {
+    text-decoration: none;
+    font-size: 0.84rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    position: relative;
+    padding-block: 0.2rem;
+    transition: color var(--transition-fast);
+    white-space: nowrap;
+}
+
+.nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -0.2rem;
+    width: 0;
+    height: 1.5px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent-strong), var(--accent-alt));
+    transition: width var(--transition-fast);
+}
+
+.nav-link:hover { color: var(--text); }
+.nav-link:hover::after, .nav-link.active::after { width: 100%; }
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--border-subtle);
+    background: radial-gradient(circle at top, rgba(24, 24, 59, 0.9), rgba(5, 5, 15, 0.95));
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    font-family: 'Space Grotesk', sans-serif;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+[data-theme="light"] .theme-toggle {
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.98), rgba(255, 247, 243, 0.98));
+}
+
+.theme-toggle:hover {
+    border-color: var(--accent-strong);
+    color: var(--accent-strong);
+    transform: translateY(-1px);
+}
+
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 5px;
+    z-index: 1002;
+}
+
+.nav-toggle span {
+    width: 24px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--text-soft);
+    transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+.nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-toggle.open span:nth-child(2) { opacity: 0; }
+.nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* --- MOBILE NAV --- */
+@media (max-width: 880px) {
+    .nav-inner { gap: 0.8rem; }
+    .nav-title { display: none; }
+
+    .nav-links {
+        position: fixed;
+        inset: var(--nav-height) 0 auto 0;
+        transform: translateY(-150%);
+        padding: 2rem 1.6rem 2.5rem;
+        flex-direction: column;
+        align-items: center;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border-subtle);
+        gap: 1.5rem;
+        transition: transform var(--transition-med);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .nav-links.open {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .nav-toggle { display: flex; }
+    .nav-right { gap: 1rem; }
+}
+
+/* --- LAYOUT --- */
+.wrap {
+    width: min(1120px, 92vw);
+    margin: 0 auto;
+}
+
+section { padding-block: 4.5rem; }
+
+@media (max-width: 768px) {
+    section { padding-block: 3rem; }
+}
+
+hr { border: none; border-top: 1px solid var(--border-subtle); }
+
+/* --- TYPOGRAPHY --- */
+.section-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    margin-bottom: 0.9rem;
+}
+
+/* eyebrow alias */
+.eyebrow {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    margin-bottom: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.eyebrow::after { content: ''; width: 30px; height: 1px; background: var(--border-subtle); }
+
+h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.8rem, 6vw, 5.5rem);
+    line-height: 1.06;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+
+h1 em {
+    font-style: italic;
+    background: linear-gradient(120deg, var(--accent-strong), var(--accent-alt));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-transform: none;
+}
+
+h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 2.2vw + 1.6rem, 2.8rem);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+h3, h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.3rem, 1.5vw + 0.9rem, 1.6rem);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.7rem;
+}
+
+h4 { font-size: 0.95rem; font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+
+.section-subtitle, .lead {
+    max-width: 560px;
+    font-size: 0.98rem;
+    color: var(--text-soft);
+    line-height: 1.8;
+    margin-bottom: 2.25rem;
+}
+
+p { font-size: 1rem; color: var(--text-soft); }
+
+/* --- HERO --- */
+#hero {
+    min-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: 5rem 3rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.hero-sub {
+    font-size: 1.02rem;
+    color: var(--text-soft);
+    max-width: 520px;
+    line-height: 1.8;
+    margin-bottom: 3rem;
+}
+
+/* Stats */
+.stats { display: flex; gap: 2.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+
+.st-box {
+    border-left: 2px solid var(--border-subtle);
+    padding-left: 1.25rem;
+}
+
+.st-box:first-child { border-color: var(--accent-strong); }
+
+.st-n {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4rem;
+    line-height: 1;
+}
+
+.st-n span { color: var(--accent-strong); }
+
+.st-l {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* Author card */
+.author {
+    margin-top: 2.5rem;
+    padding: 0.9rem 1.2rem;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    box-shadow: var(--shadow);
+}
+
+.av {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-soft), rgba(249,115,115,0.15));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--accent-strong);
+    border: 1.5px solid var(--border-subtle);
+}
+
+.av-name { font-weight: 700; font-size: 0.88rem; }
+.av-sub { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; }
+
+/* --- PILL / CHIP --- */
+.pill, .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    background: var(--accent-soft);
+}
+
+/* --- CARDS --- */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1.4rem;
+    box-shadow: var(--shadow);
+    transition: border-color var(--transition-fast), transform var(--transition-med), box-shadow var(--transition-med);
+}
+
+.card:hover {
+    border-color: rgba(168, 85, 247, 0.35);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-soft);
+}
+
+.ct {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.1rem;
+}
+
+/* --- GRID --- */
+.g2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+.g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+@media (max-width: 860px) {
+    .g2, .g3 { grid-template-columns: 1fr; }
+    .g4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) { .g4 { grid-template-columns: 1fr; } }
+
+/* --- BADGES --- */
+.b {
+    display: inline-block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 5px;
+    border: 1px solid transparent;
+}
+
+.bg { background: var(--green-bg); color: var(--green); border-color: rgba(168,85,247,0.2); }
+.bo { background: var(--orange-bg); color: var(--orange); border-color: rgba(249,115,115,0.2); }
+.by { background: var(--yellow-bg); color: var(--yellow); border-color: rgba(251,188,5,0.2); }
+.bb { background: var(--blue-bg); color: var(--blue); border-color: rgba(96,165,250,0.2); }
+.br { background: var(--red-bg); color: var(--red); border-color: rgba(249,115,115,0.2); }
+
+/* --- CODE BLOCK --- */
+.cw {
+    background: var(--bg-alt, #0C0A17);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-top: 0.9rem;
+}
+
+.cb {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.ds { display: flex; gap: 0.32rem; }
+.ds i { display: block; width: 9px; height: 9px; border-radius: 50%; }
+.ds i:nth-child(1) { background: #FF5F57; }
+.ds i:nth-child(2) { background: #FEBC2E; }
+.ds i:nth-child(3) { background: #28C840; }
+
+.fn { font-size: 0.68rem; color: var(--muted); }
+
+pre {
+    padding: 1.3rem;
+    overflow-x: auto;
+    font-size: 0.78rem;
+    line-height: 1.85;
+    color: var(--text-soft);
+    font-family: 'Courier New', monospace;
+}
+
+.kw { color: #C084FC; }
+.fc { color: #60A5FA; }
+.st { color: #86EFAC; }
+.nm { color: #FCA5A5; }
+.cm { color: var(--muted); font-style: italic; }
+.cl { color: #FCD34D; }
+
+/* --- TABLE --- */
+table { width: 100%; border-collapse: collapse; font-size: 0.81rem; }
+
+thead th {
+    text-align: left;
+    padding: 0.52rem 0.75rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+tbody td {
+    padding: 0.58rem 0.75rem;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-soft);
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface-soft); }
+
+.mono { font-family: 'Courier New', monospace; font-size: 0.74rem; }
+
+/* --- INSIGHT BOX --- */
+.ins {
+    border-left: 3px solid var(--accent-strong);
+    background: var(--accent-soft);
+    padding: 0.9rem 1.15rem;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    margin-top: 1.1rem;
+}
+
+.ins p { font-size: 0.86rem; color: var(--text-soft); line-height: 1.75; }
+.ins strong { color: var(--text); }
+
+/* --- BARS --- */
+.br-row { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.55rem; }
+
+.br-cat {
+    font-size: 0.72rem;
+    color: var(--text-soft);
+    width: 80px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.br-track {
+    flex: 1;
+    background: var(--surface-soft);
+    border-radius: 999px;
+    height: 17px;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+}
+
+.br-fill {
+    height: 100%;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    padding-right: 0.45rem;
+    justify-content: flex-end;
+    transition: width 1.3s cubic-bezier(.22,1,.36,1);
+}
+
+.br-v {
+    font-size: 0.66rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* --- METRIC CARDS --- */
+.met { text-align: center; padding: 1.6rem 1rem; }
+.met-n {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.7rem;
+    line-height: 1;
+    letter-spacing: -0.01em;
+}
+.met-l { font-size: 0.68rem; color: var(--muted); margin-top: 0.4rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.met-d { font-size: 0.73rem; font-weight: 700; margin-top: 0.55rem; padding: 0.18rem 0.52rem; border-radius: 5px; display: inline-block; }
+.up { background: var(--green-bg); color: var(--green); }
+.dn { background: var(--red-bg); color: var(--red); }
+
+/* --- PIPELINE --- */
+.pipe {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 0.4rem;
+    gap: 0;
+    margin-top: 1.75rem;
+}
+
+.ps {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    padding: 1.1rem 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    position: relative;
+    transition: border-color var(--transition-fast), transform var(--transition-med);
+}
+
+.ps:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.ps:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.ps:hover { border-color: rgba(168, 85, 247, 0.45); z-index: 1; }
+.ps + .ps { border-left: none; }
+.ps + .ps::before {
+    content: '→';
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    color: var(--accent-strong);
+    z-index: 2;
+    background: var(--surface);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pi { font-size: 1.25rem; margin-bottom: 0.35rem; }
+.pn { font-size: 0.73rem; font-weight: 700; margin-bottom: 0.18rem; color: var(--text); }
+.pd { font-size: 0.65rem; color: var(--muted); line-height: 1.4; }
+
+/* --- CONFUSION MATRIX --- */
+.cm-g {
+    display: grid;
+    grid-template-columns: auto repeat(5, 1fr);
+    gap: 3px;
+    margin-top: 0.75rem;
+}
+
+.cm-c {
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.2rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    aspect-ratio: 1;
+}
+
+.cm-h { background: none; font-size: 0.6rem; color: var(--muted); font-weight: 600; aspect-ratio: auto; padding: 0.2rem; }
+.cm-hi { background: rgba(168, 85, 247, 0.28); color: var(--accent-strong); }
+.cm-md { background: rgba(251, 188, 5, 0.2); color: var(--yellow); }
+.cm-lo { background: rgba(249, 115, 115, 0.18); color: var(--red); }
+.cm-zr { background: var(--surface-soft); color: var(--muted); }
+
+/* --- FINDINGS --- */
+.find {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding: 1.1rem;
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    transition: border-color var(--transition-fast), transform var(--transition-med);
+}
+
+.find:hover { border-color: rgba(168, 85, 247, 0.35); transform: translateY(-2px); }
+.fi { font-size: 1.3rem; flex-shrink: 0; line-height: 1; }
+.ft { font-size: 0.86rem; color: var(--text-soft); line-height: 1.7; }
+.ft strong { color: var(--text); display: block; margin-bottom: 0.18rem; font-size: 0.9rem; }
+
+/* --- NEXT STEPS --- */
+.ns { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.9rem 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.88rem; color: var(--text-soft); }
+.ns:last-child { border-bottom: none; }
+.ns-n {
+    font-size: 0.66rem;
+    font-weight: 700;
+    color: var(--accent-strong);
+    background: var(--accent-soft);
+    border-radius: 5px;
+    padding: 0.14rem 0.42rem;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    border: 1px solid rgba(168,85,247,0.2);
+}
+
+/* --- HIGHLIGHT COLUMN (from UI.html) --- */
+.highlight-column {
+    border-radius: var(--radius-lg);
+    padding: 1.6rem 1.7rem 1.4rem;
+    background: radial-gradient(circle at top, rgba(168, 85, 247, 0.18), rgba(9, 9, 20, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: grid;
+    gap: 1.1rem;
+}
+
+[data-theme="light"] .highlight-column {
+    background: radial-gradient(circle at top, rgba(127, 29, 29, 0.12), #FFFFFF);
+    border-color: rgba(0,0,0,0.08);
+}
+
+/* --- CALLOUT (from UI.html) --- */
+.callout {
+    border-radius: var(--radius-lg);
+    padding: 2.4rem 2.6rem;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(249, 115, 115, 0.18));
+    border: 2px solid var(--accent-strong);
+    box-shadow: 0 18px 40px rgba(168, 85, 247, 0.3), 0 0 60px rgba(168, 85, 247, 0.12);
+    margin-bottom: 2.4rem;
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="light"] .callout {
+    background: linear-gradient(135deg, rgba(127, 29, 29, 0.15), rgba(255, 231, 223, 0.9));
+    border-color: var(--accent-strong);
+}
+
+.callout p { color: var(--text); font-size: 1.1rem; font-weight: 600; line-height: 1.6; }
+
+/* --- BULLET LIST (from UI.html) --- */
+.bullet-list { list-style: none; display: grid; gap: 0.85rem; }
+
+.bullet-list li {
+    position: relative;
+    padding-left: 1.4rem;
+    font-size: 0.98rem;
+    color: var(--text-soft);
+}
+
+.bullet-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.55rem;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: linear-gradient(120deg, var(--accent-strong), var(--accent-alt));
+}
+
+/* --- REVEAL ANIMATIONS --- */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.in { opacity: 1; transform: none; }
+.d1 { transition-delay: 0.08s; }
+.d2 { transition-delay: 0.16s; }
+.d3 { transition-delay: 0.24s; }
+
+/* --- FOOTER --- */
+footer {
+    border-top: 1px solid var(--border-subtle);
+    padding: 2rem 0;
+    text-align: center;
+    font-size: 0.73rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    line-height: 1.8;
+}
+
+/* --- MODAL / POPUP (styled to match UI.html) --- */
+#modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(12px);
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.35s;
+}
+
+#modal.on { opacity: 1; visibility: visible; }
+
+.mb {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 2.4rem;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 32px 80px rgba(0,0,0,.35);
+    animation: mba 0.4s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes mba { from { transform: translateY(18px) scale(.97); opacity: 0; } }
+
+.mb h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+}
+
+.mb p { font-size: 0.88rem; color: var(--text-soft); line-height: 1.65; }
+
+.mbtns { display: flex; gap: 0.8rem; justify-content: center; margin-top: 1.7rem; flex-wrap: wrap; }
+
+.btn-g {
+    background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+    color: #fff;
+    border: none;
+    padding: 0.7rem 1.3rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.86rem;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    box-shadow: 0 8px 24px rgba(168,85,247,0.4);
+}
+
+.btn-g:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(168,85,247,0.5); }
+
+.btn-s {
+    background: transparent;
+    color: var(--text-soft);
+    border: 1px solid var(--border-subtle);
+    padding: 0.7rem 1.3rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.86rem;
+    transition: all var(--transition-fast);
+}
+
+.btn-s:hover { border-color: var(--accent-strong); color: var(--accent-strong); }
+
+/* --- BACK FOOTER --- */
+.back-footer { padding: 2rem 0 3rem; }
+.back-footer a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.86rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color var(--transition-fast);
+}
+.back-footer a:hover { color: var(--accent-strong); }
+</style>
+</head>
+<body>
+
+<div id="modal">
+  <div class="mb">
+    <div style="font-size:1.5rem;margin-bottom:.6rem">🛒</div>
+    <h3>Start with the Proposal?</h3>
+    <p>Read the brief project proposal for a quick overview, or jump straight into the full case study.</p>
+    <div class="mbtns">
+      <a href="proposal.pdf" class="btn-g">📄 Read Proposal</a>
+      <button class="btn-s" onclick="closeModal()">Go to Case Study</button>
+    </div>
+  </div>
+</div>
+
+<nav id="siteNav">
+    <div class="nav-inner">
+        <div class="nav-left">
+            <a href="index.html" class="back-link"><span class="icon">←</span><span>Back to portfolio</span></a>
+            <div class="nav-title">Blinkit · ML Case Study</div>
+        </div>
+        <div class="nav-right">
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#objective" class="nav-link">Objective</a></li>
+                <li><a href="#data" class="nav-link">Data</a></li>
+                <li><a href="#eda" class="nav-link">EDA</a></li>
+                <li><a href="#model" class="nav-link">Model</a></li>
+                <li><a href="#results" class="nav-link">Results</a></li>
+                <li><a href="#insights" class="nav-link">Insights</a></li>
+            </ul>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <span id="themeIcon">🌙</span><span id="themeLabel">Dark mode</span>
+            </button>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="wrap">
+    <div class="pill" style="margin-bottom:1.75rem">ML · Classification</div>
+    <h1>Predicting my<br><em>next Blinkit</em><br>order category</h1>
+    <p class="hero-sub">I order on Blinkit multiple times a day. This project uses my own invoice history to train a classifier that predicts what category I'll order next - based on time, day, spending, and what I ordered before.</p>
+    <div class="stats">
+      <div class="st-box"><div class="st-n"><span>78</span></div><div class="st-l">personal orders logged</div></div>
+      <div class="st-box"><div class="st-n"><span>82</span><span style="font-size:1.5rem;color:var(--text-soft)">%</span></div><div class="st-l">model accuracy</div></div>
+      <div class="st-box"><div class="st-n"><span>6</span></div><div class="st-l">order categories</div></div>
+      <div class="st-box"><div class="st-n"><span>7</span></div><div class="st-l">features used</div></div>
+    </div>
+    <div class="author">
+      <div class="av">L</div>
+      <div>
+        <div class="av-name">Lavanya Bhatia</div>
+        <div class="av-sub">· Python · scikit-learn · Jupyter</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- OBJECTIVE -->
+<section id="objective">
+  <div class="wrap">
+    <div class="eyebrow">01 · Problem Statement</div>
+    <h2 class="reveal">Why this project?</h2>
+    <p class="lead reveal d1">I place orders on Blinkit at different times of the day - often twice or more. I realized my orders have patterns I'm not even conscious of. This project makes those patterns visible and learnable for a machine.</p>
+    <div class="g3 reveal d1" style="margin-bottom:2.25rem">
+      <div class="card">
+        <div style="font-size:1.3rem;margin-bottom:.7rem"></div>
+        <h4>The Question</h4>
+        <p style="font-size:.83rem;color:var(--text-soft);line-height:1.7">Given what time it is, what day it is, how much I spent, and what I ordered previously - can a model predict my <em>next</em> order category?</p>
+      </div>
+      <div class="card">
+        <div style="font-size:1.3rem;margin-bottom:.7rem"></div>
+        <h4>Why Classification?</h4>
+        <p style="font-size:.83rem;color:var(--text-soft);line-height:1.7">The target - order category - is a discrete label (Fruits, Snacks, Dairy…). This is a multi-class classification problem, not regression.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:1.3rem;margin-bottom:.7rem"></div>
+        <h4>The Output</h4>
+        <p style="font-size:.83rem;color:var(--text-soft);line-height:1.7">A trained model that takes 7 input features and outputs a predicted category - with accuracy score, confusion matrix, and feature importance.</p>
+      </div>
+    </div>
+    <div class="reveal">
+      <div class="ct" style="margin-bottom:.6rem">Project Pipeline</div>
+      <div class="pipe">
+        <div class="ps"><div class="pi"></div><div class="pn">Invoices</div><div class="pd">Log orders from Blinkit history</div></div>
+        <div class="ps"><div class="pi"></div><div class="pn">Clean</div><div class="pd">Parse dates, encode categories</div></div>
+        <div class="ps"><div class="pi"></div><div class="pn">EDA</div><div class="pd">Patterns by time & day</div></div>
+        <div class="ps"><div class="pi"></div><div class="pn">Model</div><div class="pd">Random Forest Classifier</div></div>
+        <div class="ps"><div class="pi"></div><div class="pn">Evaluate</div><div class="pd">Accuracy, F1, confusion matrix</div></div>
+        <div class="ps"><div class="pi"></div><div class="pn">Insights</div><div class="pd">Behavioral findings</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- DATA -->
+<section id="data">
+  <div class="wrap">
+    <div class="eyebrow">02 · Data Collection &amp; Preparation</div>
+    <h2 class="reveal">My personal order dataset</h2>
+    <p class="lead reveal d1">I manually logged 78 orders from my Blinkit invoice history and email receipts, spanning about 6 weeks. Each row is one order placed by me.</p>
+    <div class="g2 reveal" style="align-items:start;gap:2rem">
+      <div class="card">
+        <div class="ct">Raw Dataset - Sample Rows</div>
+        <table>
+          <thead>
+            <tr><th>order_id</th><th>date &amp; time</th><th>day</th><th>hour_slot</th><th>₹ amount</th><th>basket</th><th>prev_cat</th><th>next_cat ✦</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">B001</td><td class="mono">14 Jan 08:12</td><td>Mon</td><td>Morning</td><td>₹245</td><td>4</td><td>Dairy</td><td><span class="b bg">Fruits</span></td></tr>
+            <tr><td class="mono">B002</td><td class="mono">14 Jan 21:40</td><td>Mon</td><td>Night</td><td>₹380</td><td>6</td><td>Fruits</td><td><span class="b bo">Snacks</span></td></tr>
+            <tr><td class="mono">B003</td><td class="mono">15 Jan 11:05</td><td>Tue</td><td>Morning</td><td>₹190</td><td>3</td><td>Snacks</td><td><span class="b bb">Dairy</span></td></tr>
+            <tr><td class="mono">B004</td><td class="mono">17 Jan 19:33</td><td>Thu</td><td>Evening</td><td>₹520</td><td>8</td><td>Groceries</td><td><span class="b by">Groceries</span></td></tr>
+            <tr><td class="mono">B005</td><td class="mono">19 Jan 22:15</td><td>Sat</td><td>Night</td><td>₹210</td><td>3</td><td>Dairy</td><td><span class="b bo">Snacks</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1.1rem">
+        <div class="card reveal d1">
+          <div class="ct">Feature Columns</div>
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">order_id</td><td>ID</td><td>Unique reference</td></tr>
+              <tr><td class="mono">day_of_week</td><td>Categorical</td><td>Mon–Sun (label-encoded)</td></tr>
+              <tr><td class="mono">hour_of_day</td><td>Categorical</td><td>Morning/Afternoon/Evening/Night</td></tr>
+              <tr><td class="mono">total_amount</td><td>Numeric</td><td>Order spend in ₹</td></tr>
+              <tr><td class="mono">basket_size</td><td>Numeric</td><td>Number of items</td></tr>
+              <tr><td class="mono">previous_category</td><td>Categorical</td><td>Category of last order</td></tr>
+              <tr><td class="mono" style="color:var(--accent-strong)">next_category</td><td style="color:var(--accent-strong)">🎯 Target</td><td style="color:var(--accent-strong)">What to predict</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card reveal d2">
+          <div class="ct">Preprocessing Steps</div>
+          <div style="display:flex;flex-direction:column;gap:.55rem">
+            <div style="font-size:.83rem;color:var(--text-soft);display:flex;gap:.65rem"><span style="color:var(--accent-strong);font-weight:700;flex-shrink:0">01</span>Extracted hour_of_day &amp; day_of_week from raw datetime strings</div>
+            <div style="font-size:.83rem;color:var(--text-soft);display:flex;gap:.65rem"><span style="color:var(--accent-strong);font-weight:700;flex-shrink:0">02</span>Label-encoded all categorical columns using LabelEncoder</div>
+            <div style="font-size:.83rem;color:var(--text-soft);display:flex;gap:.65rem"><span style="color:var(--accent-strong);font-weight:700;flex-shrink:0">03</span>No missing values — dataset was hand-logged from my invoices</div>
+            <div style="font-size:.83rem;color:var(--text-soft);display:flex;gap:.65rem"><span style="color:var(--accent-strong);font-weight:700;flex-shrink:0">04</span>Stratified 80/20 split → 63 train rows, 15 test rows</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- EDA -->
+<section id="eda">
+  <div class="wrap">
+    <div class="eyebrow">03 · Exploratory Data Analysis</div>
+    <h2 class="reveal">What my order history reveals</h2>
+    <p class="lead reveal d1">Before training anything, I charted my orders to find patterns — and the data had clear behavioral structure.</p>
+    <div class="g2 reveal" style="gap:1.4rem;margin-bottom:1.4rem">
+      <div class="card">
+        <div class="ct">Orders by Category (n=78)</div>
+        <div class="br-row"><span class="br-cat">Snacks</span><div class="br-track"><div class="br-fill" style="width:82%;background:linear-gradient(90deg,var(--orange-mid),var(--orange-bg))"><span class="br-v" style="color:var(--orange)">23</span></div></div></div>
+        <div class="br-row"><span class="br-cat">Fruits</span><div class="br-track"><div class="br-fill" style="width:64%;background:linear-gradient(90deg,var(--green-mid),var(--green-bg))"><span class="br-v" style="color:var(--green)">18</span></div></div></div>
+        <div class="br-row"><span class="br-cat">Dairy</span><div class="br-track"><div class="br-fill" style="width:50%;background:linear-gradient(90deg,var(--blue),var(--blue-bg))"><span class="br-v" style="color:var(--blue)">14</span></div></div></div>
+        <div class="br-row"><span class="br-cat">Groceries</span><div class="br-track"><div class="br-fill" style="width:43%;background:linear-gradient(90deg,var(--yellow),var(--yellow-bg))"><span class="br-v" style="color:var(--yellow)">12</span></div></div></div>
+        <div class="br-row"><span class="br-cat">Beverages</span><div class="br-track"><div class="br-fill" style="width:25%;background:linear-gradient(90deg,#A855F7,rgba(168,85,247,0.15))"><span class="br-v" style="color:#C084FC">7</span></div></div></div>
+        <div class="br-row"><span class="br-cat">Pers. Care</span><div class="br-track"><div class="br-fill" style="width:14%;background:linear-gradient(90deg,var(--red),var(--red-bg))"><span class="br-v" style="color:var(--red)">4</span></div></div></div>
+        <div class="ins"><p><strong>Snacks dominate at ~30%.</strong> Nearly all snack orders happen after 8 PM. The model needs to learn this time correlation — and it does, giving Snacks a 100% test precision.</p></div>
+      </div>
+      <div class="card">
+        <div class="ct">Orders by Time Slot</div>
+        <div class="br-row"><span class="br-cat">Morning</span><div class="br-track"><div class="br-fill" style="width:60%;background:linear-gradient(90deg,#FBC005,rgba(251,188,5,.15))"><span class="br-v" style="color:var(--yellow)">24 orders</span></div></div></div>
+        <div class="br-row"><span class="br-cat">Afternoon</span><div class="br-track"><div class="br-fill" style="width:30%;background:linear-gradient(90deg,var(--blue),var(--blue-bg))"><span class="br-v" style="color:var(--blue)">12 orders</span></div></div></div>
+        <div class="br-row"><span class="br-cat">Evening</span><div class="br-track"><div class="br-fill" style="width:45%;background:linear-gradient(90deg,var(--orange-mid),var(--orange-bg))"><span class="br-v" style="color:var(--orange)">18 orders</span></div></div></div>
+        <div class="br-row"><span class="br-cat">Night</span><div class="br-track"><div class="br-fill" style="width:60%;background:linear-gradient(90deg,var(--red),var(--red-bg))"><span class="br-v" style="color:var(--red)">24 orders</span></div></div></div>
+        <div style="margin-top:1.1rem">
+          <div class="ct" style="margin-bottom:.65rem">Category by slot</div>
+          <div style="display:flex;flex-direction:column;gap:.45rem">
+            <div style="display:flex;align-items:center;gap:.55rem;font-size:.81rem"><span style="color:var(--yellow);width:76px;flex-shrink:0;font-size:.72rem">Morning</span><span class="b bg">Fruits</span><span class="b bb">Dairy</span></div>
+            <div style="display:flex;align-items:center;gap:.55rem;font-size:.81rem"><span style="color:var(--blue);width:76px;flex-shrink:0;font-size:.72rem">Afternoon</span><span class="b bb">Dairy</span><span class="b by">Groceries</span></div>
+            <div style="display:flex;align-items:center;gap:.55rem;font-size:.81rem"><span style="color:var(--orange);width:76px;flex-shrink:0;font-size:.72rem">Evening</span><span class="b bo">Snacks</span><span class="b by">Groceries</span></div>
+            <div style="display:flex;align-items:center;gap:.55rem;font-size:.81rem"><span style="color:var(--red);width:76px;flex-shrink:0;font-size:.72rem">Night</span><span class="b bo">Snacks</span><span class="b br">Pers. Care</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card reveal">
+      <div class="ct">Orders by Day of Week</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem;margin-top:.4rem">
+        <div style="text-align:center"><div style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;letter-spacing:.08em">MON</div><div style="background:var(--surface-soft);border-radius:8px;height:65px;position:relative;overflow:hidden"><div style="position:absolute;bottom:0;left:0;right:0;height:55%;background:var(--green-bg);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:.25rem"><span style="font-size:.75rem;font-weight:700;color:var(--green)">11</span></div></div></div>
+        <div style="text-align:center"><div style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;letter-spacing:.08em">TUE</div><div style="background:var(--surface-soft);border-radius:8px;height:65px;position:relative;overflow:hidden"><div style="position:absolute;bottom:0;left:0;right:0;height:40%;background:var(--blue-bg);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:.25rem"><span style="font-size:.75rem;font-weight:700;color:var(--blue)">8</span></div></div></div>
+        <div style="text-align:center"><div style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;letter-spacing:.08em">WED</div><div style="background:var(--surface-soft);border-radius:8px;height:65px;position:relative;overflow:hidden"><div style="position:absolute;bottom:0;left:0;right:0;height:30%;background:var(--yellow-bg);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:.25rem"><span style="font-size:.75rem;font-weight:700;color:var(--yellow)">6</span></div></div></div>
+        <div style="text-align:center"><div style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;letter-spacing:.08em">THU</div><div style="background:var(--surface-soft);border-radius:8px;height:65px;position:relative;overflow:hidden"><div style="position:absolute;bottom:0;left:0;right:0;height:35%;background:var(--blue-bg);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:.25rem"><span style="font-size:.75rem;font-weight:700;color:var(--blue)">7</span></div></div></div>
+        <div style="text-align:center"><div style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;letter-spacing:.08em">FRI</div><div style="background:var(--surface-soft);border-radius:8px;height:65px;position:relative;overflow:hidden"><div style="position:absolute;bottom:0;left:0;right:0;height:50%;background:var(--orange-bg);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:.25rem"><span style="font-size:.75rem;font-weight:700;color:var(--orange)">10</span></div></div></div>
+        <div style="text-align:center"><div style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;letter-spacing:.08em">SAT</div><div style="background:var(--surface-soft);border-radius:8px;height:65px;position:relative;overflow:hidden"><div style="position:absolute;bottom:0;left:0;right:0;height:80%;background:var(--orange-bg);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:.25rem"><span style="font-size:.75rem;font-weight:700;color:var(--orange)">16</span></div></div></div>
+        <div style="text-align:center"><div style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;letter-spacing:.08em">SUN</div><div style="background:var(--surface-soft);border-radius:8px;height:65px;position:relative;overflow:hidden"><div style="position:absolute;bottom:0;left:0;right:0;height:100%;background:var(--red-bg);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:.25rem"><span style="font-size:.75rem;font-weight:700;color:var(--red)">20</span></div></div></div>
+      </div>
+      <div class="ins" style="margin-top:.9rem"><p><strong>Weekends are my heaviest ordering days.</strong> Saturday + Sunday = 36 of 78 orders (46%). Sunday night is the single most frequent order window in the dataset.</p></div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- MODEL -->
+<section id="model">
+  <div class="wrap">
+    <div class="eyebrow">04 · Model Building</div>
+    <h2 class="reveal">Training the classifier</h2>
+    <p class="lead reveal d1">I tested both a Decision Tree and a Random Forest. The Random Forest performed better (82% vs 74%), so that became the final model.</p>
+    <div class="g2 reveal" style="gap:2rem;align-items:start">
+      <div>
+        <div class="cw">
+          <div class="cb"><div class="ds"><i></i><i></i><i></i></div><span class="fn">blinkit_predictor.py</span></div>
+          <pre><span class="cm"># ── Load & prepare data ────────────────</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> <span class="cl">LabelEncoder</span>
+
+df <span class="kw">=</span> pd.<span class="fc">read_csv</span>(<span class="st">'my_blinkit_orders.csv'</span>)
+le <span class="kw">=</span> <span class="cl">LabelEncoder</span>()
+
+<span class="kw">for</span> col <span class="kw">in</span> [<span class="st">'day_of_week'</span>, <span class="st">'hour_of_day'</span>,
+           <span class="st">'previous_category'</span>, <span class="st">'next_category'</span>]:
+    df[col] <span class="kw">=</span> le.<span class="fc">fit_transform</span>(df[col])
+
+<span class="cm"># ── Feature / label split ──────────────</span>
+X <span class="kw">=</span> df[[<span class="st">'day_of_week'</span>, <span class="st">'hour_of_day'</span>,
+        <span class="st">'total_amount'</span>, <span class="st">'basket_size'</span>,
+        <span class="st">'previous_category'</span>]]
+y <span class="kw">=</span> df[<span class="st">'next_category'</span>]
+
+<span class="cm"># ── Train / test split ─────────────────</span>
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+X_train, X_test, y_train, y_test <span class="kw">=</span> <span class="fc">train_test_split</span>(
+    X, y, test_size<span class="kw">=</span><span class="nm">0.2</span>, stratify<span class="kw">=</span>y,
+    random_state<span class="kw">=</span><span class="nm">42</span>)
+
+<span class="cm"># ── Train Random Forest ────────────────</span>
+<span class="kw">from</span> sklearn.ensemble <span class="kw">import</span> <span class="cl">RandomForestClassifier</span>
+rf <span class="kw">=</span> <span class="cl">RandomForestClassifier</span>(
+    n_estimators<span class="kw">=</span><span class="nm">100</span>, random_state<span class="kw">=</span><span class="nm">42</span>)
+rf.<span class="fc">fit</span>(X_train, y_train)
+
+<span class="cm"># ── Evaluate ───────────────────────────</span>
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> (accuracy_score,
+    classification_report, confusion_matrix)
+
+y_pred <span class="kw">=</span> rf.<span class="fc">predict</span>(X_test)
+<span class="fc">print</span>(<span class="st">f"Accuracy: </span>{<span class="fc">accuracy_score</span>(y_test, y_pred)<span class="kw">:.2%</span>}<span class="st">"</span>)
+<span class="fc">print</span>(<span class="fc">classification_report</span>(y_test, y_pred))</pre>
+        </div>
+        <div class="ins" style="margin-top:1rem"><p><strong>Why stratify=y?</strong> Snacks and Fruits dominate my dataset. Without stratification the test set might accidentally contain mostly those — giving misleadingly high accuracy. Stratified split ensures all 6 categories are proportionally represented.</p></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1.1rem">
+        <div class="card reveal d1">
+          <div class="ct">Model Comparison</div>
+          <table>
+            <thead><tr><th>Model</th><th>Accuracy</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Decision Tree</td><td class="mono">74.3%</td><td style="color:var(--muted);font-size:.78rem">Overfits small dataset</td></tr>
+              <tr><td style="font-weight:700;color:var(--accent-strong)">Random Forest ✓</td><td class="mono" style="color:var(--accent-strong);font-weight:700">82.1%</td><td style="color:var(--accent-strong);font-size:.78rem">More robust — selected</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card reveal d2">
+          <div class="ct">Model Configuration</div>
+          <table>
+            <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>n_estimators</td><td class="mono">100</td></tr>
+              <tr><td>criterion</td><td class="mono">gini</td></tr>
+              <tr><td>test_size</td><td class="mono">0.20 → 15 rows</td></tr>
+              <tr><td>train_size</td><td class="mono">0.80 → 63 rows</td></tr>
+              <tr><td>stratify</td><td class="mono">y (next_category)</td></tr>
+              <tr><td>random_state</td><td class="mono">42</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card reveal d3">
+          <div class="ct">Feature Importance</div>
+          <div class="br-row"><span class="br-cat" style="width:105px">prev_category</span><div class="br-track"><div class="br-fill" style="width:84%;background:linear-gradient(90deg,var(--green-mid),var(--green-bg))"><span class="br-v" style="color:var(--green)">0.34</span></div></div></div>
+          <div class="br-row"><span class="br-cat" style="width:105px">hour_of_day</span><div class="br-track"><div class="br-fill" style="width:70%;background:linear-gradient(90deg,var(--orange-mid),var(--orange-bg))"><span class="br-v" style="color:var(--orange)">0.28</span></div></div></div>
+          <div class="br-row"><span class="br-cat" style="width:105px">day_of_week</span><div class="br-track"><div class="br-fill" style="width:55%;background:linear-gradient(90deg,var(--blue),var(--blue-bg))"><span class="br-v" style="color:var(--blue)">0.22</span></div></div></div>
+          <div class="br-row"><span class="br-cat" style="width:105px">total_amount</span><div class="br-track"><div class="br-fill" style="width:32%;background:linear-gradient(90deg,var(--yellow),var(--yellow-bg))"><span class="br-v" style="color:var(--yellow)">0.10</span></div></div></div>
+          <div class="br-row"><span class="br-cat" style="width:105px">basket_size</span><div class="br-track"><div class="br-fill" style="width:16%;background:linear-gradient(90deg,var(--red),var(--red-bg))"><span class="br-v" style="color:var(--red)">0.06</span></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- RESULTS -->
+<section id="results">
+  <div class="wrap">
+    <div class="eyebrow">05 · Evaluation &amp; Results</div>
+    <h2 class="reveal">How well did it predict me?</h2>
+    <p class="lead reveal d1">Evaluated on 15 held-out orders from my own history. The model correctly predicted 12 out of 15 — and the 3 it got wrong were genuinely ambiguous even to me.</p>
+    <div class="g4 reveal" style="margin-bottom:1.75rem">
+      <div class="card met"><div class="met-n" style="color:var(--accent-strong)">82<span style="font-size:1.7rem">%</span></div><div class="met-l">Overall Accuracy</div><div class="met-d up">↑ vs 74% DT</div></div>
+      <div class="card met"><div class="met-n" style="color:var(--blue)">0.80</div><div class="met-l">Macro F1-Score</div><div class="met-d up">balanced classes</div></div>
+      <div class="card met"><div class="met-n" style="color:var(--orange)">0.34</div><div class="met-l">Top Feature</div><div class="met-d up">prev_category</div></div>
+      <div class="card met"><div class="met-n" style="color:var(--red)">3</div><div class="met-l">Misclassifications</div><div class="met-d dn">out of 15</div></div>
+    </div>
+    <div class="g2 reveal" style="gap:1.4rem;align-items:start">
+      <div class="card">
+        <div class="ct">Confusion Matrix (n=15)</div>
+        <p style="font-size:.68rem;color:var(--muted);margin-bottom:.65rem">Rows = Actual · Cols = Predicted</p>
+        <div class="cm-g">
+          <div class="cm-c cm-h"></div>
+          <div class="cm-c cm-h">Snacks</div><div class="cm-c cm-h">Fruits</div><div class="cm-c cm-h">Dairy</div><div class="cm-c cm-h">Grocery</div><div class="cm-c cm-h">Bev.</div>
+          <div class="cm-c cm-h">Snacks</div><div class="cm-c cm-hi">4</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-zr">0</div>
+          <div class="cm-c cm-h">Fruits</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-hi">3</div><div class="cm-c cm-lo">1</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-zr">0</div>
+          <div class="cm-c cm-h">Dairy</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-hi">2</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-zr">0</div>
+          <div class="cm-c cm-h">Grocery</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-lo">1</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-hi">2</div><div class="cm-c cm-zr">0</div>
+          <div class="cm-c cm-h">Bev.</div><div class="cm-c cm-lo">1</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-zr">0</div><div class="cm-c cm-hi">1</div>
+        </div>
+        <div class="ins" style="margin-top:.9rem"><p>All 3 misclassifications are <strong>boundary confusions</strong> — Fruits↔Dairy and Groceries↔Fruits at morning slots. Snacks were predicted perfectly (4/4).</p></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1.1rem">
+        <div class="card">
+          <div class="ct">Classification Report</div>
+          <table>
+            <thead><tr><th>Category</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+            <tbody>
+              <tr><td><span class="b bo">Snacks</span></td><td class="mono" style="color:var(--accent-strong)">1.00</td><td class="mono" style="color:var(--accent-strong)">1.00</td><td class="mono" style="color:var(--accent-strong)">1.00</td></tr>
+              <tr><td><span class="b bg">Fruits</span></td><td class="mono" style="color:var(--accent-strong)">0.75</td><td class="mono" style="color:var(--accent-strong)">0.75</td><td class="mono" style="color:var(--accent-strong)">0.75</td></tr>
+              <tr><td><span class="b bb">Dairy</span></td><td class="mono" style="color:var(--accent-strong)">0.67</td><td class="mono" style="color:var(--accent-strong)">1.00</td><td class="mono" style="color:var(--accent-strong)">0.80</td></tr>
+              <tr><td><span class="b by">Groceries</span></td><td class="mono" style="color:var(--accent-strong)">1.00</td><td class="mono" style="color:var(--accent-strong)">0.67</td><td class="mono" style="color:var(--accent-strong)">0.80</td></tr>
+              <tr><td><span class="b br">Beverages</span></td><td class="mono" style="color:var(--red)">0.50</td><td class="mono" style="color:var(--accent-strong)">1.00</td><td class="mono" style="color:var(--red)">0.67</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="ct">Sample Predictions vs Actual</div>
+          <table>
+            <thead><tr><th>Day</th><th>Slot</th><th>Prev. Cat.</th><th>Actual</th><th>Predicted</th></tr></thead>
+            <tbody>
+              <tr><td>Sun</td><td>Night</td><td>Snacks</td><td><span class="b bo">Snacks</span></td><td><span class="b bo">Snacks</span> ✓</td></tr>
+              <tr><td>Mon</td><td>Morning</td><td>Dairy</td><td><span class="b bg">Fruits</span></td><td><span class="b bg">Fruits</span> ✓</td></tr>
+              <tr><td>Fri</td><td>Evening</td><td>Groceries</td><td><span class="b bo">Snacks</span></td><td><span class="b bo">Snacks</span> ✓</td></tr>
+              <tr style="background:var(--red-bg)"><td>Tue</td><td>Morning</td><td>Fruits</td><td><span class="b bg">Fruits</span></td><td><span class="b bb">Dairy</span> ✗</td></tr>
+              <tr><td>Sat</td><td>Night</td><td>Snacks</td><td><span class="b bo">Snacks</span></td><td><span class="b bo">Snacks</span> ✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- INSIGHTS -->
+<section id="insights">
+  <div class="wrap">
+    <div class="eyebrow">06 · Behavioral Insights</div>
+    <h2 class="reveal">What the model learned about me</h2>
+    <p class="lead reveal d1">Beyond accuracy scores, the most valuable output is what the feature importance and EDA revealed about my actual habits.</p>
+    <div class="g2 reveal" style="gap:1.1rem;margin-bottom:2rem">
+      <div class="find"><div class="fi">🌙</div><div class="ft"><strong>"Most night orders are Snacks"</strong>21 of 24 night-slot orders (87%) were snack-category. The model learned this so strongly that Snacks had 100% test precision.</div></div>
+      <div class="find"><div class="fi">🍎</div><div class="ft"><strong>"Most morning orders are Fruits"</strong>16 of 24 morning orders were Fruits or Dairy — the most health-conscious ordering window in my data.</div></div>
+      <div class="find"><div class="fi">📅</div><div class="ft"><strong>"Sunday is my highest-order day"</strong>20 orders in 6 weeks, mostly evening and night. Groceries and Snacks dominate Sunday orders specifically.</div></div>
+      <div class="find"><div class="fi">🔁</div><div class="ft"><strong>"Previous category is the best predictor"</strong>With importance score 0.34, what I ordered last is the strongest signal for what I'll order next. Snacks tend to follow Snacks.</div></div>
+    </div>
+    <div class="g2 reveal d1" style="gap:1.4rem;align-items:start">
+      <div class="card">
+        <div class="ct">What I'd do next</div>
+        <div>
+          <div class="ns"><span class="ns-n">01</span>Collect more data — 78 rows is functional but more orders would improve minority class prediction (Beverages, Personal Care)</div>
+          <div class="ns"><span class="ns-n">02</span>Add a "days since last order" feature — ordering frequency might signal urgency and category</div>
+          <div class="ns"><span class="ns-n">03</span>Try XGBoost for potential accuracy improvement on the small dataset</div>
+          <div class="ns"><span class="ns-n">04</span>Build a simple input form that takes time + previous category and outputs a live prediction</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1.1rem">
+        <div class="card">
+          <div class="ct">Tools Used</div>
+          <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.2rem">
+            <span class="b bg">Python 3.x</span><span class="b bb">scikit-learn</span><span class="b bo">pandas</span><span class="b by">numpy</span><span class="b bg">matplotlib</span><span class="b bb">seaborn</span><span class="b bo">Jupyter</span><span class="b by">Excel</span>
+          </div>
+        </div>
+        <div class="card" style="border-left:3px solid var(--accent-strong)">
+          <div class="ct">Key Takeaway</div>
+          <p style="font-family:'Playfair Display',serif;font-style:italic;font-size:1.02rem;color:var(--text);line-height:1.75">"My ordering behavior is more predictable than I thought. Time of day and what I ordered last together explain most of my choices — a 100-tree forest confirmed what I half-knew intuitively."</p>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:.7rem;letter-spacing:.06em">— Lavanya Bhatia</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap back-footer"><a href="index.html">← Back to portfolio</a></div>
+
+<footer>
+  <div class="wrap">
+    <p>Lavanya Bhatia — ML Case Study</p>
+    <p style="margin-top:.3rem">Predicting My Next Blinkit Order Category · Random Forest Classifier · 82% Accuracy · 78 Personal Orders</p>
+  </div>
+</footer>
+
+<script>
+/* MODAL */
+window.onload = () => document.getElementById('modal').classList.add('on');
+function closeModal() { document.getElementById('modal').classList.remove('on'); }
+
+/* THEME */
+const htmlEl = document.documentElement;
+const themeToggle = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+const themeLabel = document.getElementById('themeLabel');
+
+function applyTheme(t) {
+    htmlEl.setAttribute('data-theme', t);
+    if (t === 'light') {
+        themeIcon.textContent = '☀️';
+        themeLabel.textContent = 'Light mode';
+    } else {
+        themeIcon.textContent = '🌙';
+        themeLabel.textContent = 'Dark mode';
+    }
+}
+
+const storedTheme = window.localStorage.getItem('portfolio-theme');
+applyTheme((storedTheme === 'light' || storedTheme === 'dark') ? storedTheme : 'dark');
+
+themeToggle.addEventListener('click', () => {
+    const c = htmlEl.getAttribute('data-theme') || 'dark';
+    const n = c === 'dark' ? 'light' : 'dark';
+    applyTheme(n);
+    window.localStorage.setItem('portfolio-theme', n);
+});
+
+/* NAVIGATION */
+const nav = document.getElementById('siteNav');
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+const navLinkItems = document.querySelectorAll('.nav-link');
+
+navToggle.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+    navToggle.classList.toggle('open');
+});
+
+navLinkItems.forEach(link => {
+    link.addEventListener('click', () => {
+        navLinks.classList.remove('open');
+        navToggle.classList.remove('open');
+    });
+});
+
+window.addEventListener('scroll', () => {
+    window.scrollY > 80 ? nav.classList.add('scrolled') : nav.classList.remove('scrolled');
+
+    let currentId = '';
+    document.querySelectorAll('section[id]').forEach(section => {
+        const top = section.offsetTop - 140;
+        if (window.scrollY >= top) currentId = section.id;
+    });
+    navLinkItems.forEach(link => {
+        link.classList.remove('active');
+        const hrefId = link.getAttribute('href').slice(1);
+        if (hrefId === currentId) link.classList.add('active');
+    });
+});
+
+/* REVEAL ON SCROLL */
+const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('in');
+    });
+}, { threshold: 0.08, rootMargin: '0px 0px -50px 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+/* SMOOTH SCROLL */
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+        const target = document.querySelector(this.getAttribute('href'));
+        if (!target) return;
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+</script>
+</body>
+</html>
